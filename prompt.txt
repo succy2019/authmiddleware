@@ -1,0 +1,11 @@
+I want to design a middleware service for token management that supports token issuance, verification, and revocation. The goal is to make this system reusable so that developers can easily integrate it into their own applications.
+
+Each developer will be assigned a unique API key. Within their application, every end user should have an individual token generated and managed by the middleware.
+
+The tokens should be opaque (non-decodable), since I will not be storing the developer’s end users in my database. The middleware will only generate and manage tokens without holding any user identity data—developers will handle their own user management systems independently.
+
+To ensure security, all token-related operations (such as issuing, verifying, or revoking tokens) must require the developer’s API key to be included in the request headers. This API key will be used to authenticate and authorize the developer making the request.
+
+The system should be built using Cloudflare Workers and use Cloudflare D1 as the database for storing developers, API keys, issued tokens, and token states (e.g., active or revoked).
+
+The middleware should be designed to be scalable, secure, and easy to integrate, with clear endpoints and a simple authentication flow for developers.
