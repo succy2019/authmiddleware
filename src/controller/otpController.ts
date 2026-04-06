@@ -23,7 +23,7 @@ export async function sendOtp(c: Context) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Your App <onboarding@resend.dev>",
+      from: "Your App <onboarding@toklify.sbs>",
       to: [body.email],
       subject: "Your OTP Code",
       html: `<p>Your OTP code is: <strong>${otp.raw_otp_code}</strong></p><p>This code expires in ${Math.round((new Date(otp.expires_at).getTime() - Date.now()) / 60000)} minutes.</p>`,

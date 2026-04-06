@@ -22,7 +22,7 @@ if (!developer) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "Your App <onboarding@resend.dev>",
+        from: "Your App <onboarding@toklify.sbs>",
         to: [developer.email],
         subject: "Your API Key",
         html: `<p>Welcome ${developer.name}! Your API key is: <code>${developer.raw_api_key}</code></p>`
