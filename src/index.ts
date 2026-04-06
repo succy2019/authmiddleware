@@ -1,10 +1,14 @@
 import { Hono } from "hono";
 import type { Bindings, Variables } from "./type/types";
+import { rateLimiter } from "./middleware/rateLimiter";
 import developerRoutes from "./routes/developerRoutes";
 import tokenRoutes from "./routes/tokenRoutes";
 import otpRoutes from "./routes/otpRoutes";
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+
+// Rate limiting
+app.use(rateLimiter);
 
 // Health check
 app.get("/", (c) => {

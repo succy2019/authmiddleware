@@ -25,7 +25,7 @@ if (!developer) {
         from: "Your App <onboarding@resend.dev>",
         to: [developer.email],
         subject: "Your API Key",
-        html: `<p>Welcome ${developer.name}! Your API key is: <code>${developer.api_key}</code></p>`
+        html: `<p>Welcome ${developer.name}! Your API key is: <code>${developer.raw_api_key}</code></p>`
       })
     });
 
@@ -34,7 +34,7 @@ if (!developer) {
         id: developer.id,
         name: developer.name,
         email: developer.email,
-        api_key: developer.api_key,
+        api_key: developer.raw_api_key,
         created_at: developer.created_at,
       },
       201

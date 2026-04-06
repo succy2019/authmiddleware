@@ -1,5 +1,13 @@
 import type { Developer, Token, Otp } from "../type/types";
 
+async function hashValue(value: string): Promise<string> {
+  const encoded = new TextEncoder().encode(value);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 function generateId(): string {
   return crypto.randomUUID();
 }
@@ -26,15 +34,16 @@ export async function createDeveloper(
   db: D1Database,
   name: string,
   email: string
-): Promise<Developer> {
+): Promise<Developer & { raw_api_key: string }> {
   const id = generateId();
-  const api_key = generateApiKey();
+  const raw_api_key = generateApiKey();
+  const hashed_api_key = await hashValue(raw_api_key);
 
   await db
     .prepare(
       "INSERT INTO developers (id, name, email, api_key) VALUES (?, ?, ?, ?)"
     )
-    .bind(id, name, email, api_key)
+    .bind(id, name, email, hashed_api_key)
     .run();
 
   const developer = await db
@@ -42,16 +51,17 @@ export async function createDeveloper(
     .bind(id)
     .first<Developer>();
 
-  return developer!;
+  return { ...developer!, raw_api_key };
 }
 
 export async function getDeveloperByApiKey(
   db: D1Database,
   apiKey: string
 ): Promise<Developer | null> {
+  const hashedKey = await hashValue(apiKey);
   return db
     .prepare("SELECT * FROM developers WHERE api_key = ?")
-    .bind(apiKey)
+    .bind(hashedKey)
     .first<Developer>();
 }
 
@@ -61,9 +71,10 @@ export async function issueToken(
   db: D1Database,
   developerId: string,
   expiresInSeconds: number = 3600
-): Promise<Token> {
+): Promise<Token & { raw_token: string }> {
   const id = generateId();
-  const token = generateOpaqueToken();
+  const raw_token = generateOpaqueToken();
+  const hashed_token = await hashValue(raw_token);
   const expiresAt = new Date(
     Date.now() + expiresInSeconds * 1000
   ).toISOString();
@@ -72,7 +83,7 @@ export async function issueToken(
     .prepare(
       "INSERT INTO tokens (id, developer_id, token, status, expires_at) VALUES (?, ?, ?, 'active', ?)"
     )
-    .bind(id, developerId, token, expiresAt)
+    .bind(id, developerId, hashed_token, expiresAt)
     .run();
 
   const issued = await db
@@ -80,7 +91,7 @@ export async function issueToken(
     .bind(id)
     .first<Token>();
 
-  return issued!;
+  return { ...issued!, raw_token };
 }
 
 export async function verifyToken(
@@ -88,11 +99,12 @@ export async function verifyToken(
   developerId: string,
   token: string
 ): Promise<{ valid: boolean; reason?: string; token?: Token }> {
+  const hashedToken = await hashValue(token);
   const row = await db
     .prepare(
       "SELECT * FROM tokens WHERE token = ? AND developer_id = ?"
     )
-    .bind(token, developerId)
+    .bind(hashedToken, developerId)
     .first<Token>();
 
   if (!row) {
@@ -115,11 +127,12 @@ export async function revokeToken(
   developerId: string,
   token: string
 ): Promise<boolean> {
+  const hashedToken = await hashValue(token);
   const result = await db
     .prepare(
       "UPDATE tokens SET status = 'revoked' WHERE token = ? AND developer_id = ? AND status = 'active'"
     )
-    .bind(token, developerId)
+    .bind(hashedToken, developerId)
     .run();
 
   return result.meta.changes > 0;
@@ -139,9 +152,10 @@ export async function createOtp(
   developerId: string,
   email: string,
   expiresInSeconds: number = 600
-): Promise<Otp> {
+): Promise<Otp & { raw_otp_code: string }> {
   const id = generateId();
-  const otp_code = generateOtpCode();
+  const raw_otp_code = generateOtpCode();
+  const hashed_otp_code = await hashValue(raw_otp_code);
   const expiresAt = new Date(
     Date.now() + expiresInSeconds * 1000
   ).toISOString();
@@ -158,7 +172,7 @@ export async function createOtp(
     .prepare(
       "INSERT INTO otps (id, developer_id, email, otp_code, status, expires_at) VALUES (?, ?, ?, ?, 'pending', ?)"
     )
-    .bind(id, developerId, email, otp_code, expiresAt)
+    .bind(id, developerId, email, hashed_otp_code, expiresAt)
     .run();
 
   const otp = await db
@@ -166,7 +180,7 @@ export async function createOtp(
     .bind(id)
     .first<Otp>();
 
-  return otp!;
+  return { ...otp!, raw_otp_code };
 }
 
 export async function verifyOtp(
@@ -175,11 +189,12 @@ export async function verifyOtp(
   email: string,
   otpCode: string
 ): Promise<{ valid: boolean; reason?: string }> {
+  const hashedOtp = await hashValue(otpCode);
   const row = await db
     .prepare(
       "SELECT * FROM otps WHERE email = ? AND developer_id = ? AND otp_code = ? AND status = 'pending'"
     )
-    .bind(email, developerId, otpCode)
+    .bind(email, developerId, hashedOtp)
     .first<Otp>();
 
   if (!row) {

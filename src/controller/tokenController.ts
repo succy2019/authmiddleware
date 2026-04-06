@@ -19,7 +19,7 @@ export async function issue(c: Context) {
 
   return c.json(
     {
-      token: token.token,
+      token: token.raw_token,
       status: token.status,
       expires_at: token.expires_at,
       created_at: token.created_at,
