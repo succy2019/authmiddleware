@@ -1,4 +1,4 @@
-import type { Developer, Token } from "../type/types";
+import type { Developer, Token, Otp } from "../type/types";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -60,7 +60,6 @@ export async function getDeveloperByApiKey(
 export async function issueToken(
   db: D1Database,
   developerId: string,
-  userIdentifier: string,
   expiresInSeconds: number = 3600
 ): Promise<Token> {
   const id = generateId();
@@ -71,9 +70,9 @@ export async function issueToken(
 
   await db
     .prepare(
-      "INSERT INTO tokens (id, developer_id, token, user_identifier, status, expires_at) VALUES (?, ?, ?, ?, 'active', ?)"
+      "INSERT INTO tokens (id, developer_id, token, status, expires_at) VALUES (?, ?, ?, 'active', ?)"
     )
-    .bind(id, developerId, token, userIdentifier, expiresAt)
+    .bind(id, developerId, token, expiresAt)
     .run();
 
   const issued = await db
@@ -124,4 +123,81 @@ export async function revokeToken(
     .run();
 
   return result.meta.changes > 0;
+}
+
+// --- OTP Repository ---
+
+function generateOtpCode(): string {
+  const bytes = new Uint8Array(3);
+  crypto.getRandomValues(bytes);
+  const num = ((bytes[0] << 16) | (bytes[1] << 8) | bytes[2]) % 1000000;
+  return num.toString().padStart(6, "0");
+}
+
+export async function createOtp(
+  db: D1Database,
+  developerId: string,
+  email: string,
+  expiresInSeconds: number = 600
+): Promise<Otp> {
+  const id = generateId();
+  const otp_code = generateOtpCode();
+  const expiresAt = new Date(
+    Date.now() + expiresInSeconds * 1000
+  ).toISOString();
+
+  // Expire any existing pending OTPs for this email + developer
+  await db
+    .prepare(
+      "UPDATE otps SET status = 'expired' WHERE email = ? AND developer_id = ? AND status = 'pending'"
+    )
+    .bind(email, developerId)
+    .run();
+
+  await db
+    .prepare(
+      "INSERT INTO otps (id, developer_id, email, otp_code, status, expires_at) VALUES (?, ?, ?, ?, 'pending', ?)"
+    )
+    .bind(id, developerId, email, otp_code, expiresAt)
+    .run();
+
+  const otp = await db
+    .prepare("SELECT * FROM otps WHERE id = ?")
+    .bind(id)
+    .first<Otp>();
+
+  return otp!;
+}
+
+export async function verifyOtp(
+  db: D1Database,
+  developerId: string,
+  email: string,
+  otpCode: string
+): Promise<{ valid: boolean; reason?: string }> {
+  const row = await db
+    .prepare(
+      "SELECT * FROM otps WHERE email = ? AND developer_id = ? AND otp_code = ? AND status = 'pending'"
+    )
+    .bind(email, developerId, otpCode)
+    .first<Otp>();
+
+  if (!row) {
+    return { valid: false, reason: "Invalid OTP" };
+  }
+
+  if (new Date(row.expires_at) < new Date()) {
+    await db
+      .prepare("UPDATE otps SET status = 'expired' WHERE id = ?")
+      .bind(row.id)
+      .run();
+    return { valid: false, reason: "OTP has expired" };
+  }
+
+  await db
+    .prepare("UPDATE otps SET status = 'verified' WHERE id = ?")
+    .bind(row.id)
+    .run();
+
+  return { valid: true };
 }

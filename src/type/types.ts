@@ -15,8 +15,17 @@ export type Token = {
   id: string;
   developer_id: string;
   token: string;
-  user_identifier: string;
   status: "active" | "revoked";
+  created_at: string;
+  expires_at: string;
+};
+
+export type Otp = {
+  id: string;
+  developer_id: string;
+  email: string;
+  otp_code: string;
+  status: "pending" | "verified" | "expired";
   created_at: string;
   expires_at: string;
 };

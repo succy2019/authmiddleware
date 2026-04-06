@@ -1,11 +1,8 @@
 import type { Context } from "hono";
-import type { Bindings, Variables } from "../type/types";
 import { createDeveloper } from "../respository/repository";
 
-type Env = { Bindings: Bindings; Variables: Variables };
-
 export async function 
-register(c: Context<Env>) {
+register(c: Context) {
   const body = await c.req.json<{ name: string; email: string }>();
 
   if (!body.name || !body.email) {
