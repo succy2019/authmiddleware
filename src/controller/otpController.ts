@@ -26,7 +26,25 @@ export async function sendOtp(c: Context) {
       from: "Your App <onboarding@toklify.sbs>",
       to: [body.email],
       subject: "Your OTP Code",
-      html: `<p>Your OTP code is: <strong>${otp.raw_otp_code}</strong></p><p>This code expires in ${Math.round((new Date(otp.expires_at).getTime() - Date.now()) / 60000)} minutes.</p>`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+          <div style="background: #1a1a2e; padding: 30px 40px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">Verification Code</h1>
+          </div>
+          <div style="padding: 40px; border: 1px solid #e8e8e8; border-top: none; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 16px; color: #333; line-height: 1.8; margin-top: 0;">Hi,</p>
+            <p style="font-size: 16px; color: #555; line-height: 1.8;">Use the following one-time password to complete your verification:</p>
+            <div style="background: #f8f9fa; border: 1px solid #e2e6ea; padding: 20px; border-radius: 8px; margin: 24px 0; text-align: center;">
+              <span style="font-family: 'Courier New', monospace; font-size: 32px; font-weight: 700; color: #1a1a2e; letter-spacing: 6px;">${otp.raw_otp_code}</span>
+            </div>
+            <p style="font-size: 14px; color: #555; line-height: 1.8;">This code expires in <strong>${Math.round((new Date(otp.expires_at).getTime() - Date.now()) / 60000)} minutes</strong>.</p>
+            <div style="border-top: 1px solid #eee; margin-top: 32px; padding-top: 20px;">
+              <p style="font-size: 13px; color: #999; line-height: 1.6; margin: 0;">If you did not request this code, you can safely ignore this email.</p>
+            </div>
+          </div>
+          <p style="text-align: center; font-size: 12px; color: #aaa; margin-top: 20px;">&copy; Toklify. All rights reserved.</p>
+        </div>
+      `,
     }),
   });
 
