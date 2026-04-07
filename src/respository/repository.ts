@@ -65,6 +65,69 @@ export async function getDeveloperByApiKey(
     .first<Developer>();
 }
 
+export async function getDeveloperByEmail(
+  db: D1Database,
+  email: string
+): Promise<Developer | null> {
+  return db
+    .prepare("SELECT * FROM developers WHERE email = ?")
+    .bind(email)
+    .first<Developer>();
+}
+
+export async function getDeveloperById(
+  db: D1Database,
+  id: string
+): Promise<Developer | null> {
+  return db
+    .prepare("SELECT * FROM developers WHERE id = ?")
+    .bind(id)
+    .first<Developer>();
+}
+
+export async function regenerateApiKey(
+  db: D1Database,
+  developerId: string
+): Promise<string> {
+  const raw_api_key = generateApiKey();
+  const hashed_api_key = await hashValue(raw_api_key);
+  await db
+    .prepare("UPDATE developers SET api_key = ? WHERE id = ?")
+    .bind(hashed_api_key, developerId)
+    .run();
+  return raw_api_key;
+}
+
+export async function getDeveloperStats(
+  db: D1Database,
+  developerId: string
+): Promise<{
+  total_tokens: number;
+  active_tokens: number;
+  revoked_tokens: number;
+  total_otps: number;
+  verified_otps: number;
+}> {
+  const result = await db
+    .prepare(
+      `SELECT
+        (SELECT COUNT(*) FROM tokens WHERE developer_id = ?1) as total_tokens,
+        (SELECT COUNT(*) FROM tokens WHERE developer_id = ?1 AND status = 'active' AND expires_at > datetime('now')) as active_tokens,
+        (SELECT COUNT(*) FROM tokens WHERE developer_id = ?1 AND status = 'revoked') as revoked_tokens,
+        (SELECT COUNT(*) FROM otps WHERE developer_id = ?1) as total_otps,
+        (SELECT COUNT(*) FROM otps WHERE developer_id = ?1 AND status = 'verified') as verified_otps`
+    )
+    .bind(developerId)
+    .first<{
+      total_tokens: number;
+      active_tokens: number;
+      revoked_tokens: number;
+      total_otps: number;
+      verified_otps: number;
+    }>();
+  return result!;
+}
+
 // --- Token Repository ---
 
 export async function issueToken(

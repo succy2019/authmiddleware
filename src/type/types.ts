@@ -2,6 +2,8 @@ export type Bindings = {
   DB: D1Database;
   RESEND_API_KEY: string;
   RATE_LIMITER: RateLimit;
+  SESSION_SECRET: string;
+  ASSETS: Fetcher;
 };
 
 export type Developer = {
@@ -33,4 +35,5 @@ export type Otp = {
 
 export type Variables = {
   developer: Developer;
+  developerId: string;
 };
